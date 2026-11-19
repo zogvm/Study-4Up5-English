@@ -948,6 +948,7 @@
 
   function renderStage(){
     const u=unitNow(), box=$("lessonContent");
+    box.classList.toggle("pattern-stage",state.stage==="patterns");
     if(state.stage==="overview") box.innerHTML=`<div class="content-head"><span>单元原创课件导学</span><h2>这个主题单元怎样学习？</h2><p>本单元建议分3—5天完成。每次只学一个模块，第二天先复习5分钟。请同时查看上方版本标注，并以学校实际发放教材为准。</p></div><div class="material-summary"><article><b>${u.core.length}</b><span>必备与拓展词</span></article><article><b>8</b><span>核心与迁移句式</span></article><article><b>3×6</b><span>情境对话句</span></article><article><b>3+20</b><span>分级阅读与练习</span></article></div><div class="textbook-plan">${lessonPlan(u).map(item=>`<button data-open-stage="${item.stage}"><span>${item.icon}</span><div><small>LESSON ${item.number} · ${item.time}</small><h3>${item.title}</h3><p>${item.detail}</p></div><em>开始学习 →</em></button>`).join("")}</div><h3 class="goal-title">学完本单元，我可以做到</h3><div class="objective-list"><article><b>我能听懂</b><p>在“${u.zh}”情境中听出关键词，判断人物在谈论什么。</p></article><article><b>我能开口</b><p>${u.goal}</p></article><article><b>我能读懂</b><p>读懂3篇由浅入深的原创材料，找到人物、地点、时间与主要信息。</p></article><article><b>我能写出</b><p>完成20题分层练习，并仿照重点句型独立写出5个句子。</p></article></div>${unitDepthPanel(u)}<div class="explain-card"><span>${u.icon}</span><div><h3>生活情境</h3><p>想一想：你在真实生活中什么时候会用到“${u.zh}”英语？先用中文说清楚，再尝试说出一个英文关键词。</p><strong>学习秘诀：理解意思 → 看例子 → 自己换词 → 离开提示再说一遍。</strong></div></div>${doneButton("我已经看懂学习路线")}`;
     if(state.stage==="words") renderWordStage(box,u);
     if(state.stage==="patterns") renderPatternStage(box,u);
