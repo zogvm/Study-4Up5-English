@@ -227,7 +227,7 @@
 .interactive-sentence button.focus-word:hover,.interactive-sentence button.focus-word.active{background:#ffdede;border-color:#b71c1c;color:#a31515}
 
 /* V51 · 词形差异标红 */
-.word-profile .form-diff{color:#c62828;font-weight:900}
+.word-profile .form-diff{color:#c62828;font-weight:900;font-style:normal}
 
 /* V53 · 字母表两列显示并放大字号 */
 .alphabet-grid{grid-template-columns:repeat(2,1fr)}
@@ -291,3 +291,11 @@
 .phonics-tile.active{background:#ffe3e3;border-color:#b71c1c}
 .phonics-note{margin:8px 0;color:#8a6b6b;font-size:12px}
 .phonics-play{border:0;border-radius:999px;padding:8px 18px;background:#d32f2f;color:#fff;font-weight:900}
+
+/* V62 · 词汇档案左列加宽与词形单词加粗 */
+.word-profile>div{grid-template-columns:140px 1fr}
+@media(max-width:460px){.word-profile>div{grid-template-columns:1fr;gap:3px}}
+.word-profile .form-word{font-weight:900}
+
+/* V64 · 单词词义直接显示 */
+.word-meaning{display:block}

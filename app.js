@@ -999,7 +999,6 @@
     let testRecorded=done;
     box.innerHTML=`<div class="content-head"><span>第2步 · 单词本</span><h2>必备单词：听懂、录音跟读，再进入测试</h2><p>每个必备单词必须完成2次录音跟读；单词下的3个例句各录音1次。录音次数与20题填词测试都达标后，才能完成本模块。</p></div><div class="lesson-record-overview"><div><span>🎙️</span><div><small>本单元录音进度</small><b>${recording.done}/${recording.total} 次</b></div></div><progress max="${recording.total}" value="${recording.done}"></progress><p>单词2次 × ${core.length}个；每词3个例句各1次。录音只保存在当前页面，不上传。</p></div><section id="wordLearningBlock"><div class="word-section-title"><h3>⭐ 本单元重要单词</h3><small>先听标准音 → 单词录2次 → 每个例句录1次 → 回听检查</small></div><div class="vocab-grid sentence-vocab-grid">${core.map((w,i)=>wordCard(w,i,u,"core")).join("")}</div>${extra.length?`<div class="word-section-title"><h3>🚀 拓展单词</h3><small>拓展词也可以录音巩固，但不计入本模块必做次数</small></div><div class="vocab-grid extra sentence-vocab-grid">${extra.map((w,i)=>wordCard(w,i+8,u,"extra")).join("")}</div>`:""}<div class="memory-method"><h3>录音回忆法</h3><ol><li>先听标准单词，再录音跟读2次</li><li>每个例句听懂后完整录音1次</li><li>回听自己的声音，检查关键词是否清楚</li><li>遮住单词，口头补全句子</li></ol></div><button class="primary word-test-start" id="startWordTest">完成录音学习后，进入20题填词 →</button></section><section class="cloze-practice word-cloze-zone" id="wordClozeTest" hidden><div class="cloze-section-head"><div><h3>本单元单词填词测试</h3><p>单词和例句已经隐藏。请根据句意和中文提示，把学过的重要单词填回完整句子。全部作答且答对至少80%才通过。</p></div><span>${testItems.length} 题</span></div><div class="cloze-question-list">${testItems.map((item,index)=>`<article class="cloze-question" data-word-cloze="${index}"><span>${index+1}</span><div><b>${esc(blankSentence(item.en,item.answer))}</b><p>${esc(item.zh)}</p><small>提示：${esc(item.word.meaning)} · ${esc(item.answer.charAt(0))}${"＿".repeat(Math.max(1,item.answer.length-1))}</small><input type="text" autocomplete="off" spellcheck="false" data-word-cloze-answer data-word="${esc(item.word.word)}" data-expected="${esc(item.answer)}" placeholder="填入本单元单词"><em></em></div><button type="button" data-say="${esc(blankSentence(item.en,item.answer).replace("________","blank"))}" aria-label="朗读填空句">🔊</button></article>`).join("")}</div><div class="cloze-actions"><button class="soft" id="backToWordLearning">返回复习单词、例句与录音</button><button class="primary" id="checkWordCloze">提交并检查</button></div><div id="wordClozeResult"></div><div id="wordStageFinish" ${eligible?"":"hidden"}>${doneButton("我已完成录音、单词与句式学习")}</div></section>`;
     box.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>speak(b.dataset.say));
-    box.querySelectorAll("[data-toggle-word]").forEach(b=>b.onclick=()=>b.closest(".vocab-card").classList.toggle("revealed"));
     bindSentenceWords(box);
     bindPhonics(box);
     bindLessonRecorders(box);
@@ -1143,7 +1142,8 @@
     const stress=syls.findIndex(syl=>syl.stress);
     return `<div class="word-phonics" data-word="${esc(w.word)}"><div class="phonics-tiles">${syls.map((syl,index)=>`<button class="phonics-tile ${syl.stress?"stress":""}" data-syl-index="${index}" data-say-syl="${esc(syl.g)}"><b>${esc(syl.g)}</b>${syl.ipa?`<i>/${esc(syl.ipa)}/</i>`:""}</button>`).join("")}</div><p class="phonics-note">${syls.length}个音节：${syls.map(syl=>esc(syl.g)).join("·")}${stress>=0?`；重读 ${esc(syls[stress].g)}`:""}</p><button class="phonics-play">▶ 拼读</button></div>`;
   }
-  let phonicsAudioToken=0,phonicsAudioEl=null,sylPackBlob=null,sylPackUrl=null;
+  let phonicsAudioToken=0,phonicsAudioEl=null,sylPackBlob=null,sylPackUrl=null,spellToken=0;
+  const phonicsWait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   async function loadSylPackBytes(entry){
     const pack=window.KW_SYL_PACK,start=Number(entry?.[0]),length=Number(entry?.[1]);
     if(!pack||!Number.isFinite(start)||!Number.isFinite(length)||length<=0)throw new Error("missing-syllable-pack-entry");
@@ -1158,9 +1158,9 @@
     const token=++phonicsAudioToken;
     if(phonicsAudioEl){try{phonicsAudioEl.pause();phonicsAudioEl.removeAttribute("src");}catch(error){}}
     const data=wordPhonicsData(word);
-    if(data.syls.length<2||!chunk){speak(word);return true;}
+    if(data.syls.length<2||!chunk){speak(word);await phonicsWait(800);return true;}
     const stem=(window.KW_SYL_AUDIO||{})[data.key],entry=(window.KW_SYL_PACK?.entries||{})[`${stem}-${index}`];
-    if(!stem||!entry){speak(chunk);return true;}
+    if(!stem||!entry){speak(chunk);await phonicsWait(800);return true;}
     try{
       const blob=await loadSylPackBytes(entry);if(token!==phonicsAudioToken)return false;
       const url=URL.createObjectURL(blob),audio=phonicsAudioEl=new Audio(url);
@@ -1169,15 +1169,23 @@
         audio.onended=()=>finish(true);audio.onerror=()=>finish(false);setTimeout(()=>finish(false),5000);
         const playing=audio.play();if(playing&&playing.catch)playing.catch(()=>finish(false));
       });
-    }catch(error){speak(chunk);return true;}
+    }catch(error){speak(chunk);await phonicsWait(800);return true;}
   }
   async function spellOutWord(host){
-    if(!host)return;const word=host.dataset.word,buttons=[...host.querySelectorAll(".phonics-tile")],data=wordPhonicsData(word);
-    for(let index=0;index<buttons.length;index+=1){buttons.forEach(button=>button.classList.remove("active"));buttons[index].classList.add("active");await playSyllableAudio(word,index,data.syls[index]?.g);await new Promise(resolve=>setTimeout(resolve,180));}
-    buttons.forEach(button=>button.classList.remove("active"));speak(word);
+    if(!host)return;const run=++spellToken,word=host.dataset.word,buttons=[...host.querySelectorAll(".phonics-tile")],data=wordPhonicsData(word);
+    for(let index=0;index<buttons.length;index+=1){
+      if(run!==spellToken){buttons.forEach(button=>button.classList.remove("active"));return;}
+      const started=Date.now();
+      buttons.forEach(button=>button.classList.remove("active"));buttons[index].classList.add("active");
+      await playSyllableAudio(word,index,data.syls[index]?.g);
+      const passed=Date.now()-started;if(passed<700)await phonicsWait(700-passed);
+    }
+    if(run!==spellToken)return;
+    buttons.forEach(button=>button.classList.remove("active"));
+    if(data.syls.length>1)speak(word);
   }
   function bindPhonics(box){
-    box.querySelectorAll(".phonics-tile").forEach(button=>{button.onclick=()=>{const host=button.closest(".word-phonics");if(!host)return;playSyllableAudio(host.dataset.word,Number(button.dataset.sylIndex),button.dataset.saySyl);host.querySelectorAll(".phonics-tile").forEach(item=>item.classList.toggle("active",item===button));setTimeout(()=>button.classList.remove("active"),900);};});
+    box.querySelectorAll(".phonics-tile").forEach(button=>{button.onclick=async()=>{const host=button.closest(".word-phonics");if(!host)return;spellToken+=1;host.querySelectorAll(".phonics-tile").forEach(item=>item.classList.toggle("active",item===button));await playSyllableAudio(host.dataset.word,Number(button.dataset.sylIndex),button.dataset.saySyl);button.classList.remove("active");};});
     box.querySelectorAll(".phonics-play").forEach(button=>{button.onclick=()=>spellOutWord(button.closest(".word-phonics"));});
   }
   function highlightFormDiff(text,base){
@@ -1201,14 +1209,15 @@
         }
       }
       result+=esc(src.slice(last,start));
-      result+=from>=0?esc(token.slice(0,from))+`<em class="form-diff">${esc(token.slice(from))}</em>`:esc(token);
+      const wordHtml=from>=0?esc(token.slice(0,from))+`<em class="form-diff">${esc(token.slice(from))}</em>`:esc(token);
+      result+=`<b class="form-word">${wordHtml}</b>`;
       last=start+token.length;
     }
     return result+esc(src.slice(last));
   }
   function wordCard(w,i,u,type){
     const known=state.mastered.includes(`${u.id}:${w.word}`),sentences=wordSentenceStudies(w,i,u),profile=wordProfile(w),required=type==="core";
-    return `<article class="vocab-card sentence-word-card ${known?"known":""}"><button class="sound" data-say="${esc(w.word)}">🔊 单词</button><small>${type==="core"?"必备":"拓展"} ${i+1}</small><h3>${esc(w.word)}</h3>${wordIpa(w.word)?`<p class="word-ipa">${esc(wordIpa(w.word))}</p>`:""}${required?lessonRecordButton(`word:${w.word}`,2,`单词 ${w.word}`,600):""}<button class="meaning-cover" data-toggle-word>点击查看意思</button><p class="word-meaning">${esc(w.meaning)}</p>${phonicsHtml(w)}<div class="word-profile"><div><b>词性 <em class="profile-review ${profile.reviewed?"reviewed":"pending"}">${profile.reviewed?"已人工复核":"规则推断·待复核"}</em></b><span>${esc(formatPosWithAbbr(profile.pos))}</span></div><div><b>单复数 / 词形</b><span>${highlightFormDiff(profile.forms,w.word)}</span></div><div class="word-profile-meanings"><b>本课词义与常见义</b><span>${profile.meanings.map(meaning=>`<em>${esc(meaning)}</em>`).join("")}</span></div></div><div class="word-sentence-module"><div class="word-sentence-title"><em>句式学习</em><b>3个例句${required?" · 每句录音1次":" · 拓展理解"}</b></div><div class="word-sentence-list">${sentences.map((sentence,index)=>`<section><div><span>例句 ${index+1}</span><button data-say="${esc(sentence.en)}">🔊 整句</button></div>${interactiveSentence(sentence.en,u,sentence.answer)}${required?lessonRecordButton(`word-example:${w.word}:${index}`,1,`${w.word} 的例句${index+1}`,1100):""}<div class="sentence-explanation"><p><b>句子意思</b>${esc(sentence.zh)}</p><p><b>${esc(sentence.role.label)}</b><strong>${esc(w.word)}</strong>：${esc(sentence.role.detail)}</p></div></section>`).join("")}</div></div></article>`;
+    return `<article class="vocab-card sentence-word-card ${known?"known":""}"><button class="sound" data-say="${esc(w.word)}">🔊 单词</button><small>${type==="core"?"必备":"拓展"} ${i+1}</small><h3>${esc(w.word)}</h3>${wordIpa(w.word)?`<p class="word-ipa">${esc(wordIpa(w.word))}</p>`:""}${required?lessonRecordButton(`word:${w.word}`,2,`单词 ${w.word}`,600):""}<p class="word-meaning">${esc(w.meaning)}</p>${phonicsHtml(w)}<div class="word-profile"><div><b>词性 <em class="profile-review ${profile.reviewed?"reviewed":"pending"}">${profile.reviewed?"已人工复核":"规则推断·待复核"}</em></b><span>${esc(formatPosWithAbbr(profile.pos))}</span></div><div><b>单复数 / 词形</b><span>${highlightFormDiff(profile.forms,w.word)}</span></div><div class="word-profile-meanings"><b>本课词义与常见义</b><span>${profile.meanings.map(meaning=>`<em>${esc(meaning)}</em>`).join("")}</span></div></div><div class="word-sentence-module"><div class="word-sentence-title"><em>句式学习</em><b>3个例句${required?" · 每句录音1次":" · 拓展理解"}</b></div><div class="word-sentence-list">${sentences.map((sentence,index)=>`<section><div><span>例句 ${index+1}</span><button data-say="${esc(sentence.en)}">🔊 整句</button></div>${interactiveSentence(sentence.en,u,sentence.answer)}${required?lessonRecordButton(`word-example:${w.word}:${index}`,1,`${w.word} 的例句${index+1}`,1100):""}<div class="sentence-explanation"><p><b>句子意思</b>${esc(sentence.zh)}</p><p><b>${esc(sentence.role.label)}</b><strong>${esc(w.word)}</strong>：${esc(sentence.role.detail)}</p></div></section>`).join("")}</div></div></article>`;
   }
 
   function expandedPatternItems(u){
