@@ -1143,20 +1143,33 @@
     const stress=syls.findIndex(syl=>syl.stress);
     return `<div class="word-phonics" data-word="${esc(w.word)}"><div class="phonics-tiles">${syls.map((syl,index)=>`<button class="phonics-tile ${syl.stress?"stress":""}" data-syl-index="${index}" data-say-syl="${esc(syl.g)}"><b>${esc(syl.g)}</b>${syl.ipa?`<i>/${esc(syl.ipa)}/</i>`:""}</button>`).join("")}</div><p class="phonics-note">${syls.length}个音节：${syls.map(syl=>esc(syl.g)).join("·")}${stress>=0?`；重读 ${esc(syls[stress].g)}`:""}</p><button class="phonics-play">▶ 拼读</button></div>`;
   }
-  let phonicsAudioToken=0,phonicsAudioEl=null;
-  function playSyllableAudio(word,index,chunk){
+  let phonicsAudioToken=0,phonicsAudioEl=null,sylPackBlob=null,sylPackUrl=null;
+  async function loadSylPackBytes(entry){
+    const pack=window.KW_SYL_PACK,start=Number(entry?.[0]),length=Number(entry?.[1]);
+    if(!pack||!Number.isFinite(start)||!Number.isFinite(length)||length<=0)throw new Error("missing-syllable-pack-entry");
+    if(!sylPackBlob||sylPackUrl!==pack.url){
+      if("caches" in window){const cached=await caches.match(pack.url);if(cached)sylPackBlob=await cached.blob();}
+      if(!sylPackBlob){const response=await fetch(pack.url,{cache:"force-cache"});if(!response.ok)throw new Error(`syllable-pack-${response.status}`);sylPackBlob=await response.blob();if("caches" in window){const cache=await caches.open(AUDIO_PACK_CACHE);await cache.put(pack.url,sylPackBlob);}}
+      sylPackUrl=pack.url;
+    }
+    return sylPackBlob.slice(start,start+length);
+  }
+  async function playSyllableAudio(word,index,chunk){
     const token=++phonicsAudioToken;
-    if(phonicsAudioEl){try{phonicsAudioEl.pause();}catch(error){}}
-    return new Promise(resolve=>{
-      const data=wordPhonicsData(word);
-      if(data.syls.length<2||!chunk){speak(word);setTimeout(()=>resolve(true),700);return;}
-      const stem=(window.KW_SYL_AUDIO||{})[data.key];
-      if(!stem){speak(chunk);setTimeout(()=>resolve(true),700);return;}
-      const audio=phonicsAudioEl=new Audio(`assets/syl/${encodeURIComponent(stem)}-${index}.mp3`);
-      let done=false;const finish=ok=>{if(done)return;done=true;audio.onended=audio.onerror=null;resolve(ok);};
-      audio.onended=()=>finish(true);audio.onerror=()=>finish(false);setTimeout(()=>finish(false),5000);
-      const playing=audio.play();if(playing&&playing.catch)playing.catch(()=>finish(false));
-    });
+    if(phonicsAudioEl){try{phonicsAudioEl.pause();phonicsAudioEl.removeAttribute("src");}catch(error){}}
+    const data=wordPhonicsData(word);
+    if(data.syls.length<2||!chunk){speak(word);return true;}
+    const stem=(window.KW_SYL_AUDIO||{})[data.key],entry=(window.KW_SYL_PACK?.entries||{})[`${stem}-${index}`];
+    if(!stem||!entry){speak(chunk);return true;}
+    try{
+      const blob=await loadSylPackBytes(entry);if(token!==phonicsAudioToken)return false;
+      const url=URL.createObjectURL(blob),audio=phonicsAudioEl=new Audio(url);
+      return await new Promise(resolve=>{
+        let done=false;const finish=ok=>{if(done)return;done=true;audio.onended=audio.onerror=null;URL.revokeObjectURL(url);resolve(ok);};
+        audio.onended=()=>finish(true);audio.onerror=()=>finish(false);setTimeout(()=>finish(false),5000);
+        const playing=audio.play();if(playing&&playing.catch)playing.catch(()=>finish(false));
+      });
+    }catch(error){speak(chunk);return true;}
   }
   async function spellOutWord(host){
     if(!host)return;const word=host.dataset.word,buttons=[...host.querySelectorAll(".phonics-tile")],data=wordPhonicsData(word);
