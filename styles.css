@@ -221,3 +221,61 @@
 .pattern-stage .rule,.pattern-stage .try{font-size:15px}
 .pattern-stage .mistake-box li{font-size:17px}
 .pattern-stage .stage-finish p{font-size:17px}
+
+/* V50 · 单词卡例句中的本课单词标红 */
+.interactive-sentence button.focus-word{background:#fff0f0;border-color:#d32f2f;color:#c62828;font-weight:900}
+.interactive-sentence button.focus-word:hover,.interactive-sentence button.focus-word.active{background:#ffdede;border-color:#b71c1c;color:#a31515}
+
+/* V51 · 词形差异标红 */
+.word-profile .form-diff{color:#c62828;font-weight:900}
+
+/* V53 · 字母表两列显示并放大字号 */
+.alphabet-grid{grid-template-columns:repeat(2,1fr)}
+.alphabet-card{padding:26px 20px}
+.alphabet-letter b{font-size:78px}
+.alphabet-letter span{font-size:50px}
+.alphabet-card>small{font-size:20px}
+.alphabet-audio{flex-direction:row;flex-wrap:wrap}
+.alphabet-audio button{padding:10px 14px;font-size:20px}
+.alphabet-card p{font-size:22px}
+.alphabet-card>em{font-size:20px}
+.letter-known{padding:12px;font-size:22px}
+
+/* V54 · 自然拼读起步路线卡片字号加倍 */
+.phonics-path-cards{grid-template-columns:1fr;gap:22px}
+.phonics-path-cards article{padding:38px 36px 32px 104px}
+.phonics-path-cards article>span{left:28px;top:34px;width:58px;height:58px;border-radius:20px;font-size:32px}
+.phonics-path-cards small{font-size:18px}
+.phonics-path-cards h3{font-size:38px}
+.phonics-path-cards p{font-size:20px;min-height:64px}
+.phonics-path-cards>article>b{font-size:22px}
+.phonics-path-cards article>div{gap:8px;margin-top:16px}
+.phonics-path-cards button{padding:12px 14px;font-size:18px}
+.phonics-start-action{padding:38px;margin-top:30px}
+.phonics-start-action span{font-size:62px}
+.phonics-start-action h3{font-size:38px}
+.phonics-start-action p{font-size:20px}
+.phonics-start-action button{font-size:28px;padding:18px 26px}
+
+/* V56 · 字母名称与发音区卡片字号加倍 */
+.vowel-board{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:28px}
+.vowel-board>div,.vowel-board article{padding:22px}
+.vowel-board>div{grid-column:1/-1}
+.vowel-board h3{font-size:38px}
+.vowel-board p{font-size:20px}
+.vowel-board article b{font-size:38px}
+.vowel-board article span{margin:6px;font-size:22px}
+.vowel-board article small{font-size:18px}
+.vowel-board button{padding:10px 14px;font-size:18px}
+.sound-family-grid{grid-template-columns:1fr;gap:20px}
+.sound-family-grid article{padding:36px 36px 36px 104px}
+.sound-family-grid article>span{left:28px;top:34px;width:56px;height:56px;border-radius:18px;font-size:32px}
+.sound-family-grid h3{font-size:30px}
+.sound-family-grid b{font-size:24px}
+.sound-family-grid p{font-size:20px}
+.sound-practice{margin-top:28px;padding:36px}
+.sound-practice h3{font-size:38px}
+.sound-practice li{margin:14px;font-size:22px}
+
+/* V59 · 语法例句单列显示 */
+.grammar-example-grid{grid-template-columns:1fr}
