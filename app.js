@@ -983,19 +983,10 @@
   function seedNumber(text){let value=2166136261;for(const ch of text){value^=ch.charCodeAt(0);value=Math.imul(value,16777619);}return value>>>0;}
   function seededShuffle(items,seed){const result=[...items];let value=seedNumber(seed);for(let i=result.length-1;i>0;i--){value=(Math.imul(value,1664525)+1013904223)>>>0;const j=value%(i+1);[result[i],result[j]]=[result[j],result[i]];}return result;}
   function wordMeaning(word,u){
-    const clean=word.toLowerCase().replace(/[’]/g,"'");
-    const glossary=new Map(u.core.map(item=>[item.word.toLowerCase(),item.meaning]));
-    if(glossary.has(clean))return glossary.get(clean);
-    if(BASIC_MEANINGS[clean])return BASIC_MEANINGS[clean];
-    const candidates=[];
-    if(clean.endsWith("ies"))candidates.push(clean.slice(0,-3)+"y");
-    if(clean.endsWith("es"))candidates.push(clean.slice(0,-2),clean.slice(0,-1));
-    if(clean.endsWith("s"))candidates.push(clean.slice(0,-1));
-    if(clean.endsWith("ied"))candidates.push(clean.slice(0,-3)+"y");
-    if(clean.endsWith("ed"))candidates.push(clean.slice(0,-2),clean.slice(0,-1));
-    if(clean.endsWith("ing"))candidates.push(clean.slice(0,-3),clean.slice(0,-3)+"e");
-    for(const item of candidates){if(glossary.has(item))return `${glossary.get(item)}（词形变化）`;if(BASIC_MEANINGS[item])return `${BASIC_MEANINGS[item]}（词形变化）`;}
-    return "结合整句理解；可先听发音，再查看本句中文";
+    const token=String(word||""),clean=token.toLowerCase().replace(/[’]/g,"'"),extra=window.CLICK_WORD_MEANINGS||{};
+    if(extra[clean])return extra[clean];
+    const meaning=paperTokenMeaning(token);
+    return meaning==="结合本句语境理解"?"这个词的意思请查看下方句子译文":meaning;
   }
   function interactiveSentence(text,u){
     const tokens=text.match(/[A-Za-z]+(?:['’][A-Za-z]+)?|[^A-Za-z]+/g)||[];
