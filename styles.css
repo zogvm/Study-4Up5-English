@@ -299,3 +299,14 @@
 
 /* V64 · 单词词义直接显示 */
 .word-meaning{display:block}
+
+/* V66 · 词典单词卡弹窗 */
+.word-card-dialog{width:min(760px,calc(100% - 24px));max-height:92vh;overflow:auto;padding:8px 18px 22px}
+.word-card-dialog .dialog-close{position:sticky;top:0;z-index:2}
+
+/* V67 · 弹窗内音频按钮移到单词旁并修正滚动条 */
+.word-card-dialog{width:min(740px,calc(100% - 40px));max-height:88vh;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.word-card-dialog .sentence-word-card>h3{display:inline-block;margin:12px 0}
+.word-card-dialog .sentence-word-card>.sound{position:static;display:inline-block;margin:0 0 0 8px;vertical-align:middle}
+.word-card-dialog .sentence-word-card{text-align:center}
+.word-card-dialog .sentence-word-card>small{display:none}

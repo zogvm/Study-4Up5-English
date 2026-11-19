@@ -1217,7 +1217,7 @@
   }
   function wordCard(w,i,u,type){
     const known=state.mastered.includes(`${u.id}:${w.word}`),sentences=wordSentenceStudies(w,i,u),profile=wordProfile(w),required=type==="core";
-    return `<article class="vocab-card sentence-word-card ${known?"known":""}"><button class="sound" data-say="${esc(w.word)}">🔊 单词</button><small>${type==="core"?"必备":"拓展"} ${i+1}</small><h3>${esc(w.word)}</h3>${wordIpa(w.word)?`<p class="word-ipa">${esc(wordIpa(w.word))}</p>`:""}${required?lessonRecordButton(`word:${w.word}`,2,`单词 ${w.word}`,600):""}<p class="word-meaning">${esc(w.meaning)}</p>${phonicsHtml(w)}<div class="word-profile"><div><b>词性 <em class="profile-review ${profile.reviewed?"reviewed":"pending"}">${profile.reviewed?"已人工复核":"规则推断·待复核"}</em></b><span>${esc(formatPosWithAbbr(profile.pos))}</span></div><div><b>单复数 / 词形</b><span>${highlightFormDiff(profile.forms,w.word)}</span></div><div class="word-profile-meanings"><b>本课词义与常见义</b><span>${profile.meanings.map(meaning=>`<em>${esc(meaning)}</em>`).join("")}</span></div></div><div class="word-sentence-module"><div class="word-sentence-title"><em>句式学习</em><b>3个例句${required?" · 每句录音1次":" · 拓展理解"}</b></div><div class="word-sentence-list">${sentences.map((sentence,index)=>`<section><div><span>例句 ${index+1}</span><button data-say="${esc(sentence.en)}">🔊 整句</button></div>${interactiveSentence(sentence.en,u,sentence.answer)}${required?lessonRecordButton(`word-example:${w.word}:${index}`,1,`${w.word} 的例句${index+1}`,1100):""}<div class="sentence-explanation"><p><b>句子意思</b>${esc(sentence.zh)}</p><p><b>${esc(sentence.role.label)}</b><strong>${esc(w.word)}</strong>：${esc(sentence.role.detail)}</p></div></section>`).join("")}</div></div></article>`;
+    return `<article class="vocab-card sentence-word-card ${known?"known":""}"><small>${type==="core"?"必备":"拓展"} ${i+1}</small><h3>${esc(w.word)}</h3><button class="sound" data-say="${esc(w.word)}">🔊 单词</button>${wordIpa(w.word)?`<p class="word-ipa">${esc(wordIpa(w.word))}</p>`:""}${required?lessonRecordButton(`word:${w.word}`,2,`单词 ${w.word}`,600):""}<p class="word-meaning">${esc(w.meaning)}</p>${phonicsHtml(w)}<div class="word-profile"><div><b>词性 <em class="profile-review ${profile.reviewed?"reviewed":"pending"}">${profile.reviewed?"已人工复核":"规则推断·待复核"}</em></b><span>${esc(formatPosWithAbbr(profile.pos))}</span></div><div><b>单复数 / 词形</b><span>${highlightFormDiff(profile.forms,w.word)}</span></div><div class="word-profile-meanings"><b>本课词义与常见义</b><span>${profile.meanings.map(meaning=>`<em>${esc(meaning)}</em>`).join("")}</span></div></div><div class="word-sentence-module"><div class="word-sentence-title"><em>句式学习</em><b>3个例句${required?" · 每句录音1次":" · 拓展理解"}</b></div><div class="word-sentence-list">${sentences.map((sentence,index)=>`<section><div><span>例句 ${index+1}</span><button data-say="${esc(sentence.en)}">🔊 整句</button></div>${interactiveSentence(sentence.en,u,sentence.answer)}${required?lessonRecordButton(`word-example:${w.word}:${index}`,1,`${w.word} 的例句${index+1}`,1100):""}<div class="sentence-explanation"><p><b>句子意思</b>${esc(sentence.zh)}</p><p><b>${esc(sentence.role.label)}</b><strong>${esc(w.word)}</strong>：${esc(sentence.role.detail)}</p></div></section>`).join("")}</div></div></article>`;
   }
 
   function expandedPatternItems(u){
@@ -1375,6 +1375,25 @@
     }
     return uniqueDictionaryWords(allWords().map(item=>({...item,level:`${COURSE_BOOKS.find(book=>book.units.some(unit=>unit.id===item.unitId))?.grade||3}年级`})));
   }
+  function findCourseWordEntry(word){
+    const low=String(word||"").toLowerCase();
+    for(const book of COURSE_BOOKS)for(const unit of book.units){
+      const found=unit.core.find(item=>item.word.toLowerCase()===low);
+      if(found)return{word:found,unit};
+    }
+    return null;
+  }
+  function openWordCardDialog(item){
+    if(!item?.word)return;
+    const entry=findCourseWordEntry(item.word),w=entry?entry.word:item;
+    const u=entry?{id:entry.unit.id,patterns:entry.unit.patterns||[],story:entry.unit.story||"",zh:entry.unit.zh||"词典"}:{id:"dictionary",patterns:[],story:"",zh:"词典"};
+    const host=$("wordCardDialogContent");if(!host)return;
+    host.innerHTML=wordCard(w,0,u,"extra");
+    host.querySelectorAll("[data-say]").forEach(button=>button.onclick=()=>speak(button.dataset.say));
+    bindSentenceWords(host);bindPhonics(host);
+    const dialog=$("wordCardDialog");dialog.showModal?.();dialog.classList.add("open");
+  }
+  function closeWordCardDialog(){const dialog=$("wordCardDialog");dialog.close?.();dialog.classList.remove("open");}
   function renderDictionary(){
     const names={primary:"小学必备单词库",gaokao:"高考必备单词库",mine:"我的学习词库"},all=dictionaryWords(),letters=[...new Set(all.map(item=>item.word[0]?.toUpperCase()).filter(letter=>/[A-Z]/.test(letter)))];
     document.querySelectorAll("[data-dictionary-section]").forEach(button=>button.classList.toggle("active",button.dataset.dictionarySection===dictionarySection));
@@ -1384,10 +1403,14 @@
     $("dictionaryLetters").innerHTML=`<button class="${dictionaryLetter==="all"?"active":""}" data-dictionary-letter="all">全部</button>${letters.map(letter=>`<button class="${dictionaryLetter===letter?"active":""}" data-dictionary-letter="${letter}">${letter}</button>`).join("")}`;
     const query=dictionaryQuery.trim().toLowerCase();
     const filtered=all.filter(item=>(dictionaryLetter==="all"||item.word[0].toUpperCase()===dictionaryLetter)&&(!query||item.word.toLowerCase().includes(query)||item.meaning.includes(dictionaryQuery.trim())));
-    $("dictionaryGrid").innerHTML=filtered.length?filtered.slice(0,dictionaryLimit).map(item=>`<article class="dictionary-card"><button data-say="${esc(item.word)}" aria-label="播放 ${esc(item.word)}">🔊</button><div><h3>${esc(item.word)}</h3><p>${esc(item.meaning)}</p><small>${esc(item.level)}</small></div></article>`).join(""):`<div class="dictionary-empty"><span>🔎</span><h2>没有找到这个词</h2><p>请检查拼写，或切换到另一词库搜索。</p></div>`;
+    $("dictionaryGrid").innerHTML=filtered.length?filtered.slice(0,dictionaryLimit).map(item=>`<article class="dictionary-card" data-card-word="${esc(item.word)}" data-card-meaning="${esc(item.meaning)}" data-card-level="${esc(item.level)}" tabindex="0" role="button" aria-label="查看 ${esc(item.word)} 单词卡"><button data-say="${esc(item.word)}" aria-label="播放 ${esc(item.word)}">🔊</button><div><h3>${esc(item.word)}</h3><p>${esc(item.meaning)}</p><small>${esc(item.level)}</small></div></article>`).join(""):`<div class="dictionary-empty"><span>🔎</span><h2>没有找到这个词</h2><p>请检查拼写，或切换到另一词库搜索。</p></div>`;
     $("dictionaryMore").hidden=filtered.length<=dictionaryLimit;
     $("dictionaryMore").textContent=`再显示 ${Math.max(0,Math.min(48,filtered.length-dictionaryLimit))} 个单词`;
     $("dictionaryGrid").querySelectorAll("[data-say]").forEach(button=>button.onclick=()=>speak(button.dataset.say));
+    $("dictionaryGrid").querySelectorAll(".dictionary-card").forEach(card=>{
+      card.onclick=event=>{if(event.target.closest("[data-say]"))return;openWordCardDialog({word:card.dataset.cardWord,meaning:card.dataset.cardMeaning,level:card.dataset.cardLevel});};
+      card.onkeydown=event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();card.click();}};
+    });
   }
   function moveWord(known){ const pool=wordPool(); if(!pool.length)return; const w=pool[memoryIndex];scheduleReview(w.key,known,"wordbook");if(known){if(!state.mastered.includes(w.key))state.mastered.push(w.key);state.weak=state.weak.filter(x=>x!==w.key);toast(`已记住：${state.reviewSchedule[w.key].due} 再回忆`);}else{if(!state.weak.includes(w.key))state.weak.push(w.key);state.mastered=state.mastered.filter(x=>x!==w.key);toast("已加入明日复习清单，慢慢来");} activity();save();memoryIndex=(memoryIndex+1)%Math.max(1,pool.length);memoryFlipped=false;renderWords(); }
 
@@ -1717,6 +1740,8 @@
   $("dictionaryMore").onclick=()=>{dictionaryLimit+=48;renderDictionary();};
   $("closePracticeDialog").onclick=()=>{$("practiceDialog").close?.();$("practiceDialog").classList.remove("open");};
   $("practiceDialog").addEventListener("click",event=>{if(event.target===$("practiceDialog"))$("closePracticeDialog").click();});
+  $("closeWordCardDialog").onclick=closeWordCardDialog;
+  $("wordCardDialog").addEventListener("click",event=>{if(event.target===$("wordCardDialog"))closeWordCardDialog();});
   $("wordKnow").onclick=()=>moveWord(true); $("wordAgain").onclick=()=>moveWord(false);
   $("claimDailyBonus").onclick=()=>{const key=`${iso()}:${unitKey()}`,todayTasks=activeTasks();if(dailyComplete()<todayTasks.length||state.bonuses.includes(key))return;state.bonuses.push(key);reward(3,"完成今日全部任务",2);renderToday();};
   $("checkInBtn").onclick=()=>{if(state.signIns.includes(iso()))return;state.signIns.push(iso());reward(2,"今日签到成功");renderGarden();};
